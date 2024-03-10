@@ -12,6 +12,7 @@ import Combine
 import MultipeerConnectivity
 
 open class ContentViewModel: NSObject, ObservableObject {
+    @Published public var isAdvertising:Bool = false
     // The 3D character to display.
     var character: BodyTrackedEntity?
     var characterIdentity: BodyTrackedEntity?
@@ -42,10 +43,14 @@ open class ContentViewModel: NSObject, ObservableObject {
     public func startAdvertisingDevice()
     {
         nearbyServiceAdvertiser.startAdvertisingPeer()
+        isAdvertising = true
+        print("started advertising")
     }
     
     public func stopAdvertisingDevice() {
         nearbyServiceAdvertiser.stopAdvertisingPeer()
+        isAdvertising = false
+        print("stopped advertising")
     }
     
     public func load(arView:ARView) {
@@ -207,6 +212,12 @@ extension ContentViewModel {
     
     @objc func onFrame(link:CADisplayLink) {
         if displayLinkTimestamp < lastFrameDisplayLinkTimestamp + displayLink.duration * Double(skipFrames) {
+            displayLinkTimestamp = link.timestamp
+            return
+        }
+        
+        if multipeerSession.connectedPeers.count > 1 {
+            lastFrameDisplayLinkTimestamp = displayLinkTimestamp
             displayLinkTimestamp = link.timestamp
             return
         }

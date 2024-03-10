@@ -17,6 +17,9 @@
 		1E095B5E2B7B9C4100147119 /* ContentViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E095B5D2B7B9C4100147119 /* ContentViewModel.swift */; };
 		1E095B602B7B9D4B00147119 /* character in Resources */ = {isa = PBXBuildFile; fileRef = 1E095B5F2B7B9D4B00147119 /* character */; };
 		1E095BC72B7BC25700147119 /* OutputStream.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E095BC62B7BC25700147119 /* OutputStream.swift */; };
+		1EC72AA82B98A45E0040D73B /* ContentViewShareplayModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EC72AA72B98A45E0040D73B /* ContentViewShareplayModel.swift */; };
+		1EC72AAA2B98A89B0040D73B /* JointData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EC72AA92B98A89B0040D73B /* JointData.swift */; };
+		1EC72AB72B9B3DF10040D73B /* ShareplayViewContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EC72AB62B9B3DF10040D73B /* ShareplayViewContainer.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -49,8 +52,12 @@
 		1E095B502B7B9BD200147119 /* BodyDetectionBroadcastingUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyDetectionBroadcastingUITestsLaunchTests.swift; sourceTree = "<group>"; };
 		1E095B5D2B7B9C4100147119 /* ContentViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentViewModel.swift; sourceTree = "<group>"; };
 		1E095B5F2B7B9D4B00147119 /* character */ = {isa = PBXFileReference; lastKnownFileType = folder; path = character; sourceTree = "<group>"; };
-		1E095B612B7BA0BA00147119 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		1E095BC62B7BC25700147119 /* OutputStream.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutputStream.swift; sourceTree = "<group>"; };
+		1EC72AA52B98A3630040D73B /* BodyDetectionBroadcasting.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = BodyDetectionBroadcasting.entitlements; sourceTree = "<group>"; };
+		1EC72AA72B98A45E0040D73B /* ContentViewShareplayModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentViewShareplayModel.swift; sourceTree = "<group>"; };
+		1EC72AA92B98A89B0040D73B /* JointData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JointData.swift; sourceTree = "<group>"; };
+		1EC72AB52B99F4D30040D73B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		1EC72AB62B9B3DF10040D73B /* ShareplayViewContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareplayViewContainer.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -101,14 +108,18 @@
 		1E095B322B7B9BD100147119 /* BodyDetectionBroadcasting */ = {
 			isa = PBXGroup;
 			children = (
-				1E095B612B7BA0BA00147119 /* Info.plist */,
+				1EC72AA52B98A3630040D73B /* BodyDetectionBroadcasting.entitlements */,
 				1E095B332B7B9BD100147119 /* AppDelegate.swift */,
 				1E095B352B7B9BD100147119 /* ContentView.swift */,
 				1E095B5D2B7B9C4100147119 /* ContentViewModel.swift */,
+				1EC72AA72B98A45E0040D73B /* ContentViewShareplayModel.swift */,
+				1E095BC62B7BC25700147119 /* OutputStream.swift */,
+				1EC72AA92B98A89B0040D73B /* JointData.swift */,
+				1EC72AB62B9B3DF10040D73B /* ShareplayViewContainer.swift */,
 				1E095B5F2B7B9D4B00147119 /* character */,
 				1E095B372B7B9BD200147119 /* Assets.xcassets */,
+				1EC72AB52B99F4D30040D73B /* Info.plist */,
 				1E095B392B7B9BD200147119 /* Preview Content */,
-				1E095BC62B7BC25700147119 /* OutputStream.swift */,
 			);
 			path = BodyDetectionBroadcasting;
 			sourceTree = "<group>";
@@ -270,8 +281,11 @@
 			buildActionMask = 2147483647;
 			files = (
 				1E095B362B7B9BD100147119 /* ContentView.swift in Sources */,
+				1EC72AA82B98A45E0040D73B /* ContentViewShareplayModel.swift in Sources */,
+				1EC72AB72B9B3DF10040D73B /* ShareplayViewContainer.swift in Sources */,
 				1E095B342B7B9BD100147119 /* AppDelegate.swift in Sources */,
 				1E095BC72B7BC25700147119 /* OutputStream.swift in Sources */,
+				1EC72AAA2B98A89B0040D73B /* JointData.swift in Sources */,
 				1E095B5E2B7B9C4100147119 /* ContentViewModel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -433,6 +447,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = BodyDetectionBroadcasting/BodyDetectionBroadcasting.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"BodyDetectionBroadcasting/Preview Content\"";
@@ -440,6 +455,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = BodyDetectionBroadcasting/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_NSCameraUsageDescription = "";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Body tracking uses the local network to broadcast your skeleton data to connected devices.";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -455,6 +471,10 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.noisederived.BodyDetectionBroadcasting;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -466,6 +486,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = BodyDetectionBroadcasting/BodyDetectionBroadcasting.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"BodyDetectionBroadcasting/Preview Content\"";
@@ -473,6 +494,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = BodyDetectionBroadcasting/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_NSCameraUsageDescription = "";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Body tracking uses the local network to broadcast your skeleton data to connected devices.";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -488,6 +510,10 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.noisederived.BodyDetectionBroadcasting;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
