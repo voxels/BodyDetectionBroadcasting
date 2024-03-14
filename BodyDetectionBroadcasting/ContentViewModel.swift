@@ -216,7 +216,7 @@ extension ContentViewModel {
             return
         }
         
-        if multipeerSession.connectedPeers.count > 1 {
+        if multipeerSession.connectedPeers.count < 1 {
             lastFrameDisplayLinkTimestamp = displayLinkTimestamp
             displayLinkTimestamp = link.timestamp
             return

@@ -20,7 +20,6 @@ struct ShareplayViewContainer: UIViewControllerRepresentable {
         let controller = GroupActivitySharingController { () -> DanceCoordinator in
             let activity = DanceCoordinator()
             shareplayModel.coordinator = activity
-            
             return activity
         }
         return controller

@@ -13,12 +13,16 @@ import _GroupActivities_UIKit
 
 struct ContentView : View {
     @StateObject private var model = ContentViewModel()
-    @StateObject private var shareplayModel = ContentViewShareplayModel(useShareplay: false)
-    @State private var useShareplay = false
+    @StateObject private var shareplayModel = ContentViewShareplayModel(useShareplay: true)
+    @State private var useShareplay = true
+    @State private var useJournal = false
     var body: some View {
         if useShareplay {
             if !shareplayModel.isReady {
                 ShareplayViewContainer(shareplayModel: shareplayModel)
+                    .task {
+                        await shareplayModel.shareActivity()
+                    }
                     .task {
                         for await dancingSession in DanceCoordinator.sessions() {
                             print("found coordinator session \(dancingSession.activity.id)")
@@ -28,19 +32,37 @@ struct ContentView : View {
             } else {
                 ARViewContainer(model: model, shareplayModel: shareplayModel, useShareplay: useShareplay)
                     .onChange(of: shareplayModel.encodedJointData, { oldValue, newValue in
-                        guard let newValue = newValue, let journal = shareplayModel.journal, let groupSession = shareplayModel.groupSession, groupSession.activeParticipants.count > 1 else {
-                            print("Active participants: \(shareplayModel.groupSession?.activeParticipants)")
-                            return
-                        }
-                        Task {
-                            do {
-                                let data = try JSONEncoder().encode(newValue)
-                                
-                                let attachment = try await journal.add(data)
-                                print("Sending attachment:\(attachment.id)")
-                                shareplayModel.attachmentHistory.append(attachment)
-                            } catch {
-                                print(error)
+                        if useJournal {
+                            guard let newValue = newValue, let journal = shareplayModel.journal, let groupSession = shareplayModel.groupSession, groupSession.activeParticipants.count > 1 else {
+                                print("Active participants: \(shareplayModel.groupSession?.activeParticipants)")
+                                return
+                            }
+                            Task {
+                                do {
+                                    let data = try JSONEncoder().encode(newValue)
+                                    
+                                    let attachment = try await journal.add(data)
+                                    print("Sending attachment:\(attachment.id)")
+                                    shareplayModel.attachmentHistory.append(attachment)
+                                } catch {
+                                    print(error)
+                                }
+                            }
+                        } else {
+                            guard let newValue = newValue, let messenger = shareplayModel.messenger, let groupSession = shareplayModel.groupSession, groupSession.activeParticipants.count > 1 else {
+                                print("Active participants: \(shareplayModel.groupSession?.activeParticipants)")
+                                return
+                            }
+                            for key in newValue.keys {
+                                let jointData = newValue[key]
+                                Task {
+                                    do {
+                                        let data = try JSONEncoder().encode(jointData)
+                                        try await messenger.send(data)
+                                    } catch {
+                                        print(error)
+                                    }
+                                }
                             }
                         }
                     })

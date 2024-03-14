@@ -19,7 +19,7 @@ open class ContentViewShareplayModel: NSObject, ObservableObject {
     @Published public var isReady = false
     private var currentSession:ARSession?
     private var subscriptions = Set<AnyCancellable>()
-
+    
     // Published values that the player, and other UI items, observe.
     @Published var enqueuedJointData: JointData?
     var groupSession: GroupSession<DanceCoordinator>? {
@@ -43,8 +43,8 @@ open class ContentViewShareplayModel: NSObject, ObservableObject {
     @Published public var lastJointData:[JointData]?
     @Published public var jointHistory:[JointData] = [JointData]()
     private var decodeTask:Task<Void, Never>?
-
- 
+    
+    
     // The 3D character to display.
     var character: BodyTrackedEntity?
     var characterIdentity: BodyTrackedEntity?
@@ -70,8 +70,8 @@ open class ContentViewShareplayModel: NSObject, ObservableObject {
         let activity = DanceCoordinator()
         coordinator = activity
         return activity
-}
-
+    }
+    
     @MainActor
     public func startAdvertisingDevice()
     {
@@ -96,7 +96,7 @@ open class ContentViewShareplayModel: NSObject, ObservableObject {
         guard ARBodyTrackingConfiguration.isSupported else {
             fatalError("This feature is only supported on devices with an A12 chip")
         }
-
+        
         // Run a body tracking configration.
         let configuration = ARBodyTrackingConfiguration()
         arView.session.run(configuration)
@@ -106,7 +106,7 @@ open class ContentViewShareplayModel: NSObject, ObservableObject {
     
     public func configureScene(arView:ARView) {
         arView.scene.addAnchor(characterAnchor)
-
+        
         // Asynchronously load the 3D character.
         var cancellable: AnyCancellable? = nil
         cancellable = Entity.loadBodyTrackedAsync(named: "character/biped_robot").sink(
@@ -115,17 +115,17 @@ open class ContentViewShareplayModel: NSObject, ObservableObject {
                     print("Error: Unable to load model: \(error.localizedDescription)")
                 }
                 cancellable?.cancel()
-        }, receiveValue: { (character: Entity) in
-            if let character = character as? BodyTrackedEntity {
-                // Scale the character to human size
-                //self.characterAnchor.scale = [0.01, 0.01, 0.01]
-                self.character = character
-                cancellable?.cancel()
-            } else {
-                print("Error: Unable to load model as BodyTrackedEntity")
-            }
-        })
-
+            }, receiveValue: { (character: Entity) in
+                if let character = character as? BodyTrackedEntity {
+                    // Scale the character to human size
+                    //self.characterAnchor.scale = [0.01, 0.01, 0.01]
+                    self.character = character
+                    cancellable?.cancel()
+                } else {
+                    print("Error: Unable to load model as BodyTrackedEntity")
+                }
+            })
+        
     }
 }
 
@@ -133,8 +133,7 @@ extension ContentViewShareplayModel : ARSessionDelegate {
     public func session(_ session: ARSession, didUpdate anchors: [ARAnchor]) {
         for anchor in anchors {
             guard let bodyAnchor = anchor as? ARBodyAnchor else { continue }
-            print("found body anchor")
-   
+            
             if let character = character, character.parent == nil {
                 // Attach the character to its anchor as soon as
                 // 1. the body anchor was detected and
@@ -154,46 +153,46 @@ extension ContentViewShareplayModel : ARSessionDelegate {
                 characterAnchor.orientation = Transform(matrix: bodyAnchor.transform).rotation
             }
             
-            var newJointData = jointRawData
+            var newJointData = [[String:Any]]()
             let skeletonLocalTransforms = bodyAnchor.skeleton.jointLocalTransforms
-                
+            
             for index in 0..<ARSkeletonDefinition.defaultBody3D.jointNames.count {
-                    let name = ARSkeletonDefinition.defaultBody3D.jointNames[index]
+                let name = ARSkeletonDefinition.defaultBody3D.jointNames[index]
                 let transform = Transform(matrix:skeletonLocalTransforms[index])
-                    let translationValues = [
-                        "x":Double(transform.translation.x),
-                        "y":Double(transform.translation.y),
-                        "z":Double(transform.translation.z)
-                    ] as NSDictionary
-                    let orientationValues = [
-                        "r":Double(transform.rotation.real),
-                        "ix":Double(transform.rotation.imag.x),
-                        "iy":Double(transform.rotation.imag.y),
-                        "iz":Double(transform.rotation.imag.z),
-                    ] as NSDictionary
-                    let scaleValues = [
-                        "x":Double(transform.scale.x),
-                        "y":Double(transform.scale.y),
-                        "z":Double(transform.scale.z),
-                    ]
-                    let metadataValues = [
-                        "i":Double(index),
-                        "t":displayLinkTimestamp,
-                        "name":name
-                    ] as NSDictionary
-                    
-                    let anchorValues = [
-                        "x":Double(characterAnchor.transform.translation.x),
-                        "y":Double(characterAnchor.transform.translation.y),
-                        "z":Double(characterAnchor.transform.translation.z),
-                        "r":Double(characterAnchor.transform.rotation.real),
-                        "ix":Double(characterAnchor.transform.rotation.imag.x),
-                        "iy":Double(characterAnchor.transform.rotation.imag.y),
-                        "iz":Double(characterAnchor.transform.rotation.imag.z)
-                    ] as NSDictionary
-                    let jointData = ["d":metadataValues,"t":translationValues,"o":orientationValues, "s":scaleValues, "a":anchorValues] as [String : Any]
-                    newJointData.append(jointData)
-                }
+                let translationValues = [
+                    "x":Double(transform.translation.x),
+                    "y":Double(transform.translation.y),
+                    "z":Double(transform.translation.z)
+                ] as NSDictionary
+                let orientationValues = [
+                    "r":Double(transform.rotation.real),
+                    "ix":Double(transform.rotation.imag.x),
+                    "iy":Double(transform.rotation.imag.y),
+                    "iz":Double(transform.rotation.imag.z),
+                ] as NSDictionary
+                let scaleValues = [
+                    "x":Double(transform.scale.x),
+                    "y":Double(transform.scale.y),
+                    "z":Double(transform.scale.z),
+                ]
+                let metadataValues = [
+                    "i":Double(index),
+                    "t":displayLinkTimestamp,
+                    "name":name
+                ] as NSDictionary
+                
+                let anchorValues = [
+                    "x":Double(characterAnchor.transform.translation.x),
+                    "y":Double(characterAnchor.transform.translation.y),
+                    "z":Double(characterAnchor.transform.translation.z),
+                    "r":Double(characterAnchor.transform.rotation.real),
+                    "ix":Double(characterAnchor.transform.rotation.imag.x),
+                    "iy":Double(characterAnchor.transform.rotation.imag.y),
+                    "iz":Double(characterAnchor.transform.rotation.imag.z)
+                ] as NSDictionary
+                let jointData = ["d":metadataValues,"t":translationValues,"o":orientationValues, "s":scaleValues, "a":anchorValues] as [String : Any]
+                newJointData.append(jointData)
+            }
             jointRawData = newJointData
         }
     }
@@ -215,26 +214,25 @@ extension ContentViewShareplayModel {
 extension ContentViewShareplayModel {
     
     @objc func onFrame(link:CADisplayLink) {
-            Task { @MainActor in
-                
-                var finalJointData = [JointData]()
-                for rawData in jointRawData {
-                    do {
-                        let decodedData = try decode(JointData.self, from: rawData)
-                        finalJointData.append(decodedData)
-                    } catch {
-                        print(error)
-                    }
+        Task { @MainActor in
+            
+            var finalJointData = [JointData]()
+            for rawData in jointRawData {
+                do {
+                    let decodedData = try decode(JointData.self, from: rawData)
+                    finalJointData.append(decodedData)
+                } catch {
+                    print(error)
                 }
-                lastJointData = nextJointData
-                nextJointData = finalJointData
-                var encodedData = [String:JointData]()
-                for nextJointDatum in finalJointData {
-                    encodedData[nextJointDatum.d.name] = nextJointDatum
-                }
-                encodedJointData = encodedData
-                    print("set encoded data")
-                }
+            }
+            lastJointData = nextJointData
+            nextJointData = finalJointData
+            var encodedData = [String:JointData]()
+            for nextJointDatum in finalJointData {
+                encodedData[nextJointDatum.d.name] = nextJointDatum
+            }
+            encodedJointData = encodedData
+        }
         
         
         lastFrameDisplayLinkTimestamp = displayLinkTimestamp
@@ -263,8 +261,9 @@ extension ContentViewShareplayModel {
             
         case .activationDisabled:
             print("Activation disabled")
-//            // Playback coordination isn't active, or the user prefers to play the
-//            // movie apart from the group. Enqueue the movie for local playback only.
+            isReady = false
+            //            // Playback coordination isn't active, or the user prefers to play the
+            //            // movie apart from the group. Enqueue the movie for local playback only.
             
         case .activationPreferred:
             // The user prefers to share this activity with the group.
@@ -277,9 +276,9 @@ extension ContentViewShareplayModel {
             }
             
         case .cancelled:
-            // The user cancels the operation. Do nothing.
-            break
-            
+            if let groupSession = groupSession {
+                configureGroupSession(groupSession)
+            }
         default: ()
         }
     }
@@ -288,45 +287,47 @@ extension ContentViewShareplayModel {
     func configureGroupSession(_ groupSession: GroupSession<DanceCoordinator>) {
         print("Configure group session")
         self.groupSession = groupSession
-        Task {
-            await joinDanceCoordinator(groupSession: groupSession)
+        if !groupSession.activeParticipants.contains(groupSession.localParticipant) {
+            Task {
+                await joinDanceCoordinator(groupSession: groupSession)
+            }
         }
     }
     
     @MainActor
     public func joinDanceCoordinator(groupSession:GroupSession<DanceCoordinator>) async {
-            // Remove previous subscriptions.
-            subscriptions.removeAll()
-            
-            // Observe changes to the session state.
-            groupSession.$state.sink { [weak self] state in
-                if case .invalidated = state {
-                    // Set the groupSession to nil to publish
-                    // the invalidated session state.
-                    self?.groupSession = nil
-                    self?.messenger = nil
-                    self?.journal = nil
-                    self?.subscriptions.removeAll()
-                    self?.isActivated = false
-                    self?.isReady = false
-                    print("Session invalidated")
-                } else if case .joined = state {
-                    print("Joined group session \(groupSession.id)\t\(groupSession.activeParticipants)")
-                    self?.isActivated = true
-                }
-            }.store(in: &subscriptions)
-            
-            // Join the session to participate in playback coordination.
+        // Remove previous subscriptions.
+        subscriptions.removeAll()
+        
+        // Observe changes to the session state.
+        groupSession.$state.sink { [weak self] state in
+            if case .invalidated = state {
+                // Set the groupSession to nil to publish
+                // the invalidated session state.
+                self?.groupSession = nil
+                self?.messenger = nil
+                self?.journal = nil
+                self?.subscriptions.removeAll()
+                self?.isActivated = false
+                self?.isReady = false
+                print("Session invalidated")
+            } else if case .joined = state {
+                print("Joined group session \(groupSession.id)\t\(groupSession.activeParticipants)")
+                self?.isActivated = true
+            }
+        }.store(in: &subscriptions)
+        
+        // Join the session to participate in playback coordination.
         if groupSession.state != .joined  {
             groupSession.join()
         }
-            
-            // Observe when the local user or a remote participant starts an activity.
-            groupSession.$activity.sink { [weak self] activity in
-                print("activity is active:\(activity.id)")
-                self?.isReady = true
-            }.store(in: &subscriptions)
-        }
+        
+        // Observe when the local user or a remote participant starts an activity.
+        groupSession.$activity.sink { [weak self] activity in
+            print("activity is active:\(activity.id)")
+            self?.isReady = true
+        }.store(in: &subscriptions)
+    }
 }
 
 
