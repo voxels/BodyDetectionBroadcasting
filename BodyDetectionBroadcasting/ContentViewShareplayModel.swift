@@ -87,6 +87,7 @@ open class ContentViewShareplayModel: NSObject, ObservableObject {
         currentSession?.pause()
     }
     
+    @MainActor
     public func load(arView:ARView) {
         currentSession = arView.session
         arView.session.delegate = self
@@ -104,12 +105,13 @@ open class ContentViewShareplayModel: NSObject, ObservableObject {
         
     }
     
+    @MainActor
     public func configureScene(arView:ARView) {
         arView.scene.addAnchor(characterAnchor)
         
         // Asynchronously load the 3D character.
         var cancellable: AnyCancellable? = nil
-        cancellable = Entity.loadBodyTrackedAsync(named: "character/biped_robot").sink(
+        cancellable = Entity.loadBodyTrackedAsync(named: "character/biped_robot_90").sink(
             receiveCompletion: { completion in
                 if case let .failure(error) = completion {
                     print("Error: Unable to load model: \(error.localizedDescription)")

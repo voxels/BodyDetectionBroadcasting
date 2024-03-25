@@ -74,6 +74,7 @@ enum Presentation {
         }
     }
     
+    @MainActor
     /// Creates a new player view controller object.
     /// - Returns: a configured player view controller.
     func makePlayerViewController() -> AVPlayerViewController {
