@@ -17,8 +17,8 @@ struct ContentView : View {
     @State private var useShareplay = true
     @State private var useJournal = false
     @State private var playerModel = PlayerModel()
-    private let videoURLString = "https://customer-02f18dl7ud0edmeq.cloudflarestream.com/eb980b10c52b699e5b544aceb9b610d9/manifest/video.m3u8"
-    private let audioURLString = "https://streams.radiomast.io/295116c5-c102-44a8-b4ed-667dbfb3c4a7"
+    private let videoURLString = "http://10.0.0.111:1935/ShadowDancingBroadcasting/countryclub/playlist.m3u8?DVR"
+    private let audioURLString = "http://10.0.0.111:8000/radio"
     var body: some View {
         if useShareplay {
             if !shareplayModel.isReady {
@@ -82,22 +82,27 @@ struct ContentView : View {
                                 shareplayModel.isReady = false
                             }
                         }
+                        .task {
+                            if let groupSession = shareplayModel.groupSession {
+                                playerModel.player.playbackCoordinator.coordinateWithSession(groupSession)
+                                playerModel.audioPlayer.playbackCoordinator.coordinateWithSession(groupSession)
+                                Task { @MainActor in
+                                    do {
+                                        playerModel.loadAudio(urlString: audioURLString)
+                                        try await playerModel.loadVideo(URL(string:videoURLString)!, presentation: .fullWindow)
+                                    } catch {
+                                        print(error)
+                                    }
+                                }
+                            }
+                        }
                     PlayerViewController(model: $playerModel)
                         .frame(width:320, height:240)
                         .padding(32)
                         .onDisappear(perform: {
                             playerModel.stop()
                         })
-                        .task { @MainActor in
-                            do {
-                                playerModel.loadAudio(urlString: audioURLString)
-                                try await playerModel.loadVideo(URL(string:videoURLString)!,presentation: .fullWindow )
-                                playerModel.play()
-                            } catch {
-                                print(error)
-                            }
-                        }.foregroundStyle(.clear)
-
+                        .foregroundStyle(.clear)
                 })
             }
         } else {

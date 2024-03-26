@@ -12,9 +12,11 @@ import GroupActivities
 import CoreTransferable
 import UniformTypeIdentifiers
 
-public struct DanceCoordinator:GroupActivity, Identifiable {
+public struct DanceCoordinator:GroupActivity, Identifiable, Codable {
     public var id:UUID = UUID()
-    
+    public var sharedVideo:URL = URL(string:"http://10.0.0.68:1935/ShadowDancingBroadcasting/countryclub/playlist.m3u8?DVR")!
+    public var sharedAudio:URL = URL(string:"http://10.0.0.68:8000/radio")!
+
     public static let activityIdentifier = "com.noisederived.BodyDetectionBroadcasting.body-tracking"
 }
 
