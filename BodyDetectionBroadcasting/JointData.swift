@@ -33,18 +33,40 @@ extension DanceCoordinator {
     }
 }
 
+public struct SkeletonJointData:Equatable, Codable, Hashable, CustomMessageIdentifiable {
+    public static var messageIdentifier: String = "com.noisederived.BodyDetectionBroadcasting.skeletonjointdata"
+    let ident:String
+    let jointData:[String:JointData]
+}
 
-public struct JointData: Equatable, Codable, Hashable, CustomMessageIdentifiable {
-    
+extension SkeletonJointData: Transferable {
+    public static var transferRepresentation: some TransferRepresentation {
+        CodableRepresentation(contentType: .skeletonjointdata)
+        
+        DataRepresentation(contentType: .skeletonjointdata) { jointData in
+            try JSONEncoder().encode(jointData)
+        } importing: { data in
+            try JSONDecoder().decode(SkeletonJointData.self, from: data)
+        }
+    }
+}
+
+extension UTType {
+     static var skeletonjointdata: UTType { UTType(exportedAs: "com.noisederived.BodyDetectionBroadcasting.skeletonjointdata") }
+}
+
+
+public struct JointData:Identifiable, Equatable, Codable, Hashable, CustomMessageIdentifiable {
     public static var messageIdentifier: String = "com.noisederived.BodyDetectionBroadcasting.jointdata"
 
+    public let id:String
     let d:JointMetadata
     let t:TranslationData
     let o:OrientationData
     let s:ScaleData
     let a:AnchorData
     
-    static let zero = JointData(d: JointMetadata(i: 0, t: 0, name: "root"), t:TranslationData(x: 0, y: 0, z: 0), o: OrientationData(r: 1, ix: 0, iy: 0, iz: 0), s: ScaleData(x: 1, y: 1, z: 1), a: AnchorData(x: 0, y: 0, z: 0, r: 1, ix: 0, iy: 0, iz: 0))
+    static let zero = JointData(id: UUID().uuidString, d: JointMetadata(i: 0, t: 0, name: "root", ident: "zero", a: 0.0), t:TranslationData(x: 0, y: 0, z: 0), o: OrientationData(r: 1, ix: 0, iy: 0, iz: 0), s: ScaleData(x: 1, y: 1, z: 1), a: AnchorData(x: 0, y: 0, z: 0, r: 1, ix: 0, iy: 0, iz: 0))
     
     var scale:SIMD3<Float> {
         get {
@@ -69,42 +91,43 @@ public struct JointData: Equatable, Codable, Hashable, CustomMessageIdentifiable
     }
 }
 
+
 public struct JointMetadata : Equatable, Codable, Hashable {
-    let i:Double
+    let i:Float
     let t:Double
     let name:String
+    let ident:String
+    let a:Float
 }
 
 public struct TranslationData:Equatable, Codable, Hashable {
-    let x:Double
-    let y:Double
-    let z:Double
+    let x:Float
+    let y:Float
+    let z:Float
 }
 
 public struct ScaleData:Equatable, Codable, Hashable {
-    let x:Double
-    let y:Double
-    let z:Double
+    let x:Float
+    let y:Float
+    let z:Float
 }
 
 public struct OrientationData:Equatable, Codable, Hashable {
-    let r:Double
-    let ix:Double
-    let iy:Double
-    let iz:Double
+    let r:Float
+    let ix:Float
+    let iy:Float
+    let iz:Float
 }
 
 public struct AnchorData: Equatable, Codable, Hashable {
-    let x:Double
-    let y:Double
-    let z:Double
-    let r:Double
-    let ix:Double
-    let iy:Double
-    let iz:Double
+    let x:Float
+    let y:Float
+    let z:Float
+    let r:Float
+    let ix:Float
+    let iy:Float
+    let iz:Float
 }
-
-
 
 extension JointData: Transferable {
     public static var transferRepresentation: some TransferRepresentation {

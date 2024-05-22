@@ -31,6 +31,21 @@
 			<array>
 				<string>public.json</string>
 			</array>
+			<key>UTTypeIdentifier</key>
+			<string>com.noisederived.BodyDetectionBroadcasting.skeletonjointdata</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>skeletonjointdata</string>
+				</array>
+			</dict>
+		</dict>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.json</string>
+			</array>
 			<key>UTTypeDescription</key>
 			<string>Joint Data</string>
 			<key>UTTypeIconFiles</key>
@@ -48,6 +63,21 @@
 	</array>
 	<key>UTImportedTypeDeclarations</key>
 	<array>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.json</string>
+			</array>
+			<key>UTTypeIdentifier</key>
+			<string>com.noisederived.BodyDetectionBroadcasting.skeletonjointdata</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>skeletonjointdata</string>
+				</array>
+			</dict>
+		</dict>
 		<dict>
 			<key>UTTypeConformsTo</key>
 			<array>

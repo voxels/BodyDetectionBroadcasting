@@ -11,6 +11,15 @@ import ARKit
 import Combine
 import MultipeerConnectivity
 
+// Specify the decimal place to round to using an enum
+public enum RoundingPrecision {
+    case ones
+    case tenths
+    case hundredths
+    case thousands
+    case tenThousands
+}
+
 open class ContentViewModel: NSObject, ObservableObject {
     @Published public var isAdvertising:Bool = false
     // The 3D character to display.
@@ -18,17 +27,22 @@ open class ContentViewModel: NSObject, ObservableObject {
     var characterIdentity: BodyTrackedEntity?
     let characterOffset: SIMD3<Float> = [0, 0, 0] // Offset the character by one meter to the left
     let characterAnchor = AnchorEntity()
-    var stream:OutputStream?
-    let skipFrames:Int = 5
+    var characterAnchors = [UUID:AnchorEntity]()
+    var characters = [UUID:BodyTrackedEntity]()
+
+    private var sendTask:Task<Void, Never>?
     private var displayLink:CADisplayLink!
-    private let multipeerSession: MCSession
+    public let multipeerSession: MCSession
     // 2
     private let myPeerId = MCPeerID(displayName: UIDevice.current.name)
     
     private static let service = "body-tracking"
     private var nearbyServiceAdvertiser: MCNearbyServiceAdvertiser
-    public var jointRawData = [[String:Any]]()
-    var displayLinkTimestamp:Double = 0
+    public var jointRawData = [String:[[String:Any]]]()
+    private var countFrames = 0
+    public var frameCount = 0
+    let skipFrames:Int = 3
+    @Published var displayLinkTimestamp:Double = 0
     var lastFrameDisplayLinkTimestamp:Double = 0
     override public init() {
         self.multipeerSession = MCSession(peer: myPeerId, securityIdentity: nil, encryptionPreference: .none)
@@ -37,7 +51,6 @@ open class ContentViewModel: NSObject, ObservableObject {
         multipeerSession.delegate = self
         nearbyServiceAdvertiser.delegate = self
         createDisplayLink()
-
     }
     
     public func startAdvertisingDevice()
@@ -81,6 +94,7 @@ open class ContentViewModel: NSObject, ObservableObject {
                 // Scale the character to human size
                 //self.characterAnchor.scale = [0.01, 0.01, 0.01]
                 self.character = character
+                self.characterIdentity = character
                 cancellable?.cancel()
             } else {
                 print("Error: Unable to load model as BodyTrackedEntity")
@@ -92,75 +106,116 @@ open class ContentViewModel: NSObject, ObservableObject {
 extension ContentViewModel : ARSessionDelegate {
     public func session(_ session: ARSession, didUpdate anchors: [ARAnchor]) {
         for anchor in anchors {
-            guard let bodyAnchor = anchor as? ARBodyAnchor else { continue }
-   
-            if let character = character, character.parent == nil {
-                // Attach the character to its anchor as soon as
-                // 1. the body anchor was detected and
-                // 2. the character was loaded.
-                // Update the position of the character anchor's position.
-                let bodyPosition = simd_make_float3(bodyAnchor.transform.columns.3)
-                characterAnchor.position = bodyPosition + characterOffset
-                // Also copy over the rotation of the body anchor, because the skeleton's pose
-                // in the world is relative to the body anchor's rotation.
-                characterAnchor.orientation = Transform(matrix: bodyAnchor.transform).rotation
-                characterAnchor.addChild(character)
-            } else if let _ = character {
-                let bodyPosition = simd_make_float3(bodyAnchor.transform.columns.3)
-                characterAnchor.position = bodyPosition + characterOffset
-                // Also copy over the rotation of the body anchor, because the skeleton's pose
-                // in the world is relative to the body anchor's rotation.
-                characterAnchor.orientation = Transform(matrix: bodyAnchor.transform).rotation
+            guard let bodyAnchor = anchor as? ARBodyAnchor else {
+                continue
             }
             
-            jointRawData.removeAll(keepingCapacity: true)
-            var newJointData = jointRawData
-            let skeletonLocalTransforms = bodyAnchor.skeleton.jointLocalTransforms
-                
-            for index in 0..<ARSkeletonDefinition.defaultBody3D.jointNames.count {
-                    let name = ARSkeletonDefinition.defaultBody3D.jointNames[index]
-                let transform = Transform(matrix:skeletonLocalTransforms[index])
-                    let translationValues = [
-                        "x":Double(transform.translation.x),
-                        "y":Double(transform.translation.y),
-                        "z":Double(transform.translation.z)
-                    ] as NSDictionary
-                    let orientationValues = [
-                        "r":Double(transform.rotation.real),
-                        "ix":Double(transform.rotation.imag.x),
-                        "iy":Double(transform.rotation.imag.y),
-                        "iz":Double(transform.rotation.imag.z),
-                    ] as NSDictionary
-                    let scaleValues = [
-                        "x":Double(transform.scale.x),
-                        "y":Double(transform.scale.y),
-                        "z":Double(transform.scale.z),
-                    ]
-                    let metadataValues = [
-                        "i":Double(index),
-                        "t":displayLinkTimestamp,
-                        "name":name
-                    ] as NSDictionary
-                    
-                    let anchorValues = [
-                        "x":Double(characterAnchor.transform.translation.x),
-                        "y":Double(characterAnchor.transform.translation.y),
-                        "z":Double(characterAnchor.transform.translation.z),
-                        "r":Double(characterAnchor.transform.rotation.real),
-                        "ix":Double(characterAnchor.transform.rotation.imag.x),
-                        "iy":Double(characterAnchor.transform.rotation.imag.y),
-                        "iz":Double(characterAnchor.transform.rotation.imag.z)
-                    ] as NSDictionary
-                    let jointData = ["d":metadataValues,"t":translationValues,"o":orientationValues, "s":scaleValues, "a":anchorValues] as [String : Any]
-                    newJointData.append(jointData)
-                }
-            jointRawData = newJointData
+//            if bodyAnchor.isTracked {
+//                foundTracking.insert(anchor.identifier)
+//                lostTracking.remove(anchor.identifier)
+//            } else {
+//                foundTracking.remove(anchor.identifier)
+//                lostTracking.insert(anchor.identifier)
+//                if let anchor = characterAnchors[anchor.identifier] {
+//                    anchor.removeFromParent()
+//                }
+//                characters.removeValue(forKey: anchor.identifier)
+//                characterAnchors.removeValue(forKey: anchor.identifier)
+//            }
+            
+            
+            if let characterIdentity = characterIdentity, !characterAnchors.keys.contains(anchor.identifier) {
+                let bodyPosition = simd_make_float3(bodyAnchor.transform.columns.3)
+                var newAnchor = AnchorEntity()
+                newAnchor.position = bodyPosition + characterOffset
+                // Also copy over the rotation of the body anchor, because the skeleton's pose
+                // in the world is relative to the body anchor's rotation.
+                newAnchor.orientation = Transform(matrix: bodyAnchor.transform).rotation
+                let newCharacter = characterIdentity.clone(recursive: true)
+                newAnchor.addChild(newCharacter)
+                characterAnchors[anchor.identifier] = newAnchor
+                characters[anchor.identifier] = newCharacter
+            } else if let characterIdentity = characterIdentity, let characterAnchor = characterAnchors[anchor.identifier] {
+                let bodyPosition = simd_make_float3(bodyAnchor.transform.columns.3)
 
+                var newAnchor = characterAnchor
+                newAnchor.position = bodyPosition + characterOffset
+                // Also copy over the rotation of the body anchor, because the skeleton's pose
+                // in the world is relative to the body anchor's rotation.
+                newAnchor.orientation = Transform(matrix: bodyAnchor.transform).rotation
+                characterAnchors[anchor.identifier] = newAnchor
+            }
+            
+            var newJointData = [[String:Any]]()
+            let skeletonLocalTransforms = bodyAnchor.skeleton.jointLocalTransforms
+            
+            for index in 0..<ARSkeletonDefinition.defaultBody3D.jointNames.count {
+                let id = UUID().uuidString
+                let name = ARSkeletonDefinition.defaultBody3D.jointNames[index]
+                let transform = Transform(matrix:skeletonLocalTransforms[index])
+                let translationValues = [
+                    "x":preciseRound(transform.translation.x),
+                    "y":preciseRound(transform.translation.y),
+                    "z":preciseRound(transform.translation.z)
+                ] as NSDictionary
+                let orientationValues = [
+                    "r":preciseRound(transform.rotation.real),
+                    "ix":preciseRound(transform.rotation.imag.x),
+                    "iy":preciseRound(transform.rotation.imag.y),
+                    "iz":preciseRound(transform.rotation.imag.z),
+                ] as NSDictionary
+                let scaleValues = [
+                    "x":preciseRound(transform.scale.x),
+                    "y":preciseRound(transform.scale.y),
+                    "z":preciseRound(transform.scale.z),
+                ]
+                let metadataValues = [
+                    "i":Float(index),
+                    "t":displayLinkTimestamp,
+                    "name":name,
+                    "ident":anchor.identifier.uuidString,
+                    "a":bodyAnchor.isTracked ? 1.0 : 0.0
+                ] as NSDictionary
+                
+                guard let characterAnchor = characterAnchors[anchor.identifier] else {
+                    continue
+                }
+                
+                let anchorValues = [
+                    "x":preciseRound(characterAnchor.transform.translation.x),
+                    "y":preciseRound(characterAnchor.transform.translation.y),
+                    "z":preciseRound(characterAnchor.transform.translation.z),
+                    "r":preciseRound(characterAnchor.transform.rotation.real),
+                    "ix":preciseRound(characterAnchor.transform.rotation.imag.x),
+                    "iy":preciseRound(characterAnchor.transform.rotation.imag.y),
+                    "iz":preciseRound(characterAnchor.transform.rotation.imag.z)
+                ] as NSDictionary
+                
+                
+                let jointData = ["id":id,"d":metadataValues,"t":translationValues,"o":orientationValues, "s":scaleValues, "a":anchorValues] as [String : Any]
+                newJointData.append(jointData)
+            }
+            
+            let checker = JSONSerialization.isValidJSONObject(newJointData)
+            if checker {
+                jointRawData[anchor.identifier.uuidString] = newJointData
+            } else {
+                print("Found invalid new joint data \(newJointData)")
+            }
         }
     }
     
     public func session(_ session: ARSession, didUpdate frame: ARFrame) {
-        
+         
+    }
+    
+    public func send(rawData:[String : [[String : Any]]]) async -> Void {
+        do {
+            let jsonData = try JSONSerialization.data(withJSONObject:rawData)
+            try multipeerSession.send(jsonData, toPeers: multipeerSession.connectedPeers, with: .unreliable)
+        } catch {
+            print(error)
+        }
     }
 }
 
@@ -195,8 +250,6 @@ extension ContentViewModel : MCSessionDelegate {
     public func session(_ session: MCSession, didFinishReceivingResourceWithName resourceName: String, fromPeer peerID: MCPeerID, at localURL: URL?, withError error: Error?) {
         
     }
-    
-    
 }
 
 
@@ -204,6 +257,7 @@ extension ContentViewModel : MCSessionDelegate {
 extension ContentViewModel {
     private func createDisplayLink() {
         displayLink = CADisplayLink(target: self, selector:#selector(onFrame(link:)))
+        displayLink.preferredFramesPerSecond = 30
         displayLink.add(to: .main, forMode: .default)
     }
 }
@@ -211,27 +265,9 @@ extension ContentViewModel {
 extension ContentViewModel {
     
     @objc func onFrame(link:CADisplayLink) {
-        if displayLinkTimestamp < lastFrameDisplayLinkTimestamp + displayLink.duration * Double(skipFrames) {
-            displayLinkTimestamp = link.timestamp
-            return
-        }
-        
-        if multipeerSession.connectedPeers.count < 1 {
-            lastFrameDisplayLinkTimestamp = displayLinkTimestamp
-            displayLinkTimestamp = link.timestamp
-            return
-        }
-        
-        do{
-            let jsonData = try JSONSerialization.data(withJSONObject: jointRawData)
-            try multipeerSession.send(jsonData, toPeers: multipeerSession.connectedPeers, with: .reliable)
-            lastFrameDisplayLinkTimestamp = displayLinkTimestamp
-            displayLinkTimestamp = link.timestamp
-        } catch {
-            lastFrameDisplayLinkTimestamp = displayLinkTimestamp
-            displayLinkTimestamp = link.timestamp
-            print(error)
-        }
+        lastFrameDisplayLinkTimestamp = displayLinkTimestamp
+        displayLinkTimestamp = link.timestamp
+        frameCount += 1
     }
 }
 
@@ -240,4 +276,72 @@ extension ContentViewModel : MCNearbyServiceAdvertiserDelegate {
         invitationHandler(true, self.multipeerSession)
     }
     
+}
+
+extension ContentViewModel {
+    /// Run a given function at an approximate frequency.
+    ///
+    /// > Note: This method doesn’t take into account the time it takes to run the given function itself.
+    @MainActor
+    func run(function: () async -> Void, withFrequency hz: UInt64) async {
+        while true {
+            if Task.isCancelled {
+                return
+            }
+            
+            // Sleep for 1 s / hz before calling the function.
+            let nanoSecondsToSleep: UInt64 = NSEC_PER_SEC / hz
+            do {
+                try await Task.sleep(nanoseconds: nanoSecondsToSleep)
+            } catch {
+                // Sleep fails when the Task is cancelled. Exit the loop.
+                return
+            }
+            
+            await function()
+        }
+    }
+}
+
+extension ContentViewModel {
+    // Round to the specific decimal place
+    public func preciseRound(
+        _ value: Float,
+        precision: RoundingPrecision = .tenThousands) -> Double
+    {
+        return Double(value)
+//        switch precision {
+//        case .ones:
+//            return round(value)
+//        case .tenths:
+//            return round(value * 10) / 10.0
+//        case .hundredths:
+//            return round(value * 100) / 100.0
+//        case .thousands:
+//            return round(value * 1000) / 1000.0
+//        case .tenThousands:
+//            return round(value * 10000) / 10000.0
+//        }
+    }
+    
+    
+    func run(function: () -> Void, withFrequency hz: UInt64) async {
+        while true {
+            if Task.isCancelled {
+                return
+            }
+            
+            // Sleep for 1 s / hz before calling the function.
+            let nanoSecondsToSleep: UInt64 = NSEC_PER_SEC / hz
+            do {
+                try await Task.sleep(nanoseconds: nanoSecondsToSleep)
+            } catch {
+                // Sleep fails when the Task is cancelled. Exit the loop.
+                return
+            }
+            
+            function()
+        }
+    }
+
 }
