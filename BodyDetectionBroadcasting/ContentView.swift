@@ -17,6 +17,7 @@ struct ContentView : View {
     @State private var useShareplay = false
     @State private var useJournal = false
     @State private var playerModel = PlayerModel()
+    @State private var sendTask:Task<Void, Never>?
     private let videoURLString = "http://192.168.8.179:1935/live/countryclub/playlist.m3u8?DVR"
     private let audioURLString = "http://192.168.8.179:8000/radio"
     var body: some View {
@@ -123,15 +124,23 @@ struct ContentView : View {
             .onDisappear(perform: {
                 model.stopAdvertisingDevice()
             })
-            .task(priority: .userInitiated, {
-                await model.run(function: {
-                    if model.multipeerSession.connectedPeers.count >= 1 {
-                        await model.send(rawData:model.jointRawData)
-                        print("sending rawData \(model.jointRawData.keys)")
-                        print(model.displayLinkTimestamp)
+            .onChange(of: model.frameCount) { oldValue, newValue in
+                if model.multipeerSession.connectedPeers.count >= 1 {
+                    if let sendTask = sendTask, !sendTask.isCancelled {
+                        print("Cancelling task")
+                        sendTask.cancel()
                     }
-                }, withFrequency: 30)
-            })
+                    
+                    sendTask = Task(priority: .userInitiated) {
+                        if Task.isCancelled {
+                            print("Canceled task")
+                            return
+                        }
+                        model.send(rawData:model.jointRawData)
+                        print("Sent model")
+                    }
+                }
+            }
         }
     }
 }

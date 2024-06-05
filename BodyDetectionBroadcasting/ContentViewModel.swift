@@ -40,8 +40,8 @@ open class ContentViewModel: NSObject, ObservableObject {
     private var nearbyServiceAdvertiser: MCNearbyServiceAdvertiser
     public var jointRawData = [String:[[String:Any]]]()
     private var countFrames = 0
-    public var frameCount = 0
-    let skipFrames:Int = 3
+    @Published public var frameCount = 0
+    let skipFrames:Int = 2
     @Published var displayLinkTimestamp:Double = 0
     var lastFrameDisplayLinkTimestamp:Double = 0
     override public init() {
@@ -199,6 +199,7 @@ extension ContentViewModel : ARSessionDelegate {
             let checker = JSONSerialization.isValidJSONObject(newJointData)
             if checker {
                 jointRawData[anchor.identifier.uuidString] = newJointData
+                
             } else {
                 print("Found invalid new joint data \(newJointData)")
             }
@@ -209,10 +210,16 @@ extension ContentViewModel : ARSessionDelegate {
          
     }
     
-    public func send(rawData:[String : [[String : Any]]]) async -> Void {
+    public func send(rawData:[String : [[String : Any]]]) -> Void {
         do {
-            let jsonData = try JSONSerialization.data(withJSONObject:rawData)
-            try multipeerSession.send(jsonData, toPeers: multipeerSession.connectedPeers, with: .unreliable)
+            let jsonData = try JSONSerialization.data(withJSONObject: rawData)
+            
+            // Compress the data
+            
+            // Send data with user-initiated priority
+            let compressedData = try (jsonData as NSData).compressed(using: .lz4)
+            
+            try multipeerSession.send(compressedData as Data, toPeers: multipeerSession.connectedPeers, with: .unreliable)
         } catch {
             print(error)
         }
@@ -257,14 +264,14 @@ extension ContentViewModel : MCSessionDelegate {
 extension ContentViewModel {
     private func createDisplayLink() {
         displayLink = CADisplayLink(target: self, selector:#selector(onFrame(link:)))
-        displayLink.preferredFramesPerSecond = 30
+        displayLink.preferredFramesPerSecond = 60
         displayLink.add(to: .main, forMode: .default)
     }
 }
 
 extension ContentViewModel {
     
-    @objc func onFrame(link:CADisplayLink) {
+    @MainActor @objc func onFrame(link:CADisplayLink) {
         lastFrameDisplayLinkTimestamp = displayLinkTimestamp
         displayLinkTimestamp = link.timestamp
         frameCount += 1
