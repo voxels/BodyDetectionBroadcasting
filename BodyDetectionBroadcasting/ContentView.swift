@@ -18,6 +18,7 @@ struct ContentView : View {
     @State private var useJournal = false
     @State private var playerModel = PlayerModel()
     @State private var sendTask:Task<Void, Never>?
+    private let lock = NSLock()
     private let videoURLString = "http://192.168.8.179:1935/live/countryclub/playlist.m3u8?DVR"
     private let audioURLString = "http://192.168.8.179:8000/radio"
     var body: some View {
@@ -65,8 +66,13 @@ struct ContentView : View {
                                 guard let messenger = shareplayModel.messenger, let groupSession = shareplayModel.groupSession, groupSession.state == .joined else {
                                     print("Active participants: \(shareplayModel.groupSession?.activeParticipants)")
                                     return
+                                    
                                 }
+                                
                                 Task(priority: .userInitiated, operation: {
+                                    if Task.isCancelled {
+                                        return
+                                    }
                                     for key in newValue.keys {
                                         let jointsData = newValue[key]!
                                         for jointsDatum in jointsData {
@@ -125,19 +131,13 @@ struct ContentView : View {
                 model.stopAdvertisingDevice()
             })
             .onChange(of: model.frameCount) { oldValue, newValue in
+                lock.lock()
+                defer { lock.unlock() }
                 if model.multipeerSession.connectedPeers.count >= 1 {
-                    if let sendTask = sendTask, !sendTask.isCancelled {
-                        print("Cancelling task")
-                        sendTask.cancel()
-                    }
-                    
+                    sendTask?.cancel()
                     sendTask = Task(priority: .userInitiated) {
-                        if Task.isCancelled {
-                            print("Canceled task")
-                            return
-                        }
-                        model.send(rawData:model.jointRawData)
-                        print("Sent model")
+                        if Task.isCancelled { return }
+                        model.send(rawData: model.jointRawData)
                     }
                 }
             }

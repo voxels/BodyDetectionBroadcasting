@@ -21,6 +21,7 @@ public enum RoundingPrecision {
 }
 
 open class ContentViewModel: NSObject, ObservableObject {
+    var internalView:ARView?
     @Published public var isAdvertising:Bool = false
     // The 3D character to display.
     var character: BodyTrackedEntity?
@@ -41,9 +42,14 @@ open class ContentViewModel: NSObject, ObservableObject {
     public var jointRawData = [String:[[String:Any]]]()
     private var countFrames = 0
     @Published public var frameCount = 0
+    @Published public var fitSelected:Bool = false
+    @Published public var frameReady:Bool = false
     let skipFrames:Int = 2
     @Published var displayLinkTimestamp:Double = 0
     var lastFrameDisplayLinkTimestamp:Double = 0
+    
+    private let lock = NSLock()
+    
     override public init() {
         self.multipeerSession = MCSession(peer: myPeerId, securityIdentity: nil, encryptionPreference: .none)
         self.nearbyServiceAdvertiser = MCNearbyServiceAdvertiser(peer: multipeerSession.myPeerID, discoveryInfo: nil, serviceType: ContentViewModel.service)
@@ -66,18 +72,37 @@ open class ContentViewModel: NSObject, ObservableObject {
         print("stopped advertising")
     }
     
+    @MainActor
     public func load(arView:ARView) {
         arView.session.delegate = self
-        
+        internalView = arView
         // If the iOS device doesn't support body tracking, raise a developer error for
         // this unhandled case.
+        reset(arView: arView)
+    }
+    
+    @MainActor
+    public func pauseARSession() {
+        internalView?.session.pause()
+    }
+    
+    @MainActor
+    public func restartARSession() {
+        if let internalView = internalView {
+            Task { @MainActor in
+                reset(arView: internalView)
+            }
+        }
+    }
+    
+    public func reset(arView:ARView) {
         guard ARBodyTrackingConfiguration.isSupported else {
             fatalError("This feature is only supported on devices with an A12 chip")
         }
 
         // Run a body tracking configration.
         let configuration = ARBodyTrackingConfiguration()
-        arView.session.run(configuration)
+        arView.session.run(configuration, options: [.resetTracking, .removeExistingAnchors, .resetSceneReconstruction])
         
         arView.scene.addAnchor(characterAnchor)
         
@@ -100,6 +125,7 @@ open class ContentViewModel: NSObject, ObservableObject {
                 print("Error: Unable to load model as BodyTrackedEntity")
             }
         })
+
     }
 }
 
@@ -211,6 +237,8 @@ extension ContentViewModel : ARSessionDelegate {
     }
     
     public func send(rawData:[String : [[String : Any]]]) -> Void {
+        lock.lock()
+        defer { lock.unlock() }
         do {
             let jsonData = try JSONSerialization.data(withJSONObject: rawData)
             
@@ -220,9 +248,11 @@ extension ContentViewModel : ARSessionDelegate {
             let compressedData = try (jsonData as NSData).compressed(using: .lz4)
             
             try multipeerSession.send(compressedData as Data, toPeers: multipeerSession.connectedPeers, with: .unreliable)
+            print("Sent joint data:\(displayLinkTimestamp)")
         } catch {
             print(error)
         }
+        sendTask = nil
     }
 }
 
@@ -243,6 +273,32 @@ extension ContentViewModel : MCSessionDelegate {
     }
     
     public func session(_ session: MCSession, didReceive data: Data, fromPeer peerID: MCPeerID) {
+        do {
+            let dict = try JSONSerialization.jsonObject(with: data)
+            if let messageDict = dict as? [String:Bool] {
+                for key in messageDict.keys {
+                    switch key {
+                    case "fitSelected":
+                        let value = messageDict[key]
+                        print("Fit selected:\(value!)")
+                        Task { @MainActor in
+                            fitSelected = value!
+                        }
+                    case "frameReady":
+                        let value = messageDict[key]
+                        print("Frame Ready:\(value!)")
+                        Task { @MainActor in
+                            frameReady = value!
+                        }
+                    default:
+                        print("Unknown key \(key)")
+                    }
+                }
+            }
+
+        }catch {
+            print(error)
+        }
         
     }
     
@@ -264,7 +320,7 @@ extension ContentViewModel : MCSessionDelegate {
 extension ContentViewModel {
     private func createDisplayLink() {
         displayLink = CADisplayLink(target: self, selector:#selector(onFrame(link:)))
-        displayLink.preferredFramesPerSecond = 60
+        displayLink.preferredFramesPerSecond = 30
         displayLink.add(to: .main, forMode: .default)
     }
 }
@@ -272,6 +328,8 @@ extension ContentViewModel {
 extension ContentViewModel {
     
     @MainActor @objc func onFrame(link:CADisplayLink) {
+        lock.lock()
+                defer { lock.unlock() }
         lastFrameDisplayLinkTimestamp = displayLinkTimestamp
         displayLinkTimestamp = link.timestamp
         frameCount += 1
