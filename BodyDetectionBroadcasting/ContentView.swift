@@ -134,7 +134,6 @@ struct ContentView : View {
                 lock.lock()
                 defer { lock.unlock() }
                 if model.multipeerSession.connectedPeers.count >= 1 {
-                    sendTask?.cancel()
                     sendTask = Task(priority: .userInitiated) {
                         if Task.isCancelled { return }
                         model.send(rawData: model.jointRawData)

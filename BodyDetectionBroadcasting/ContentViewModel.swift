@@ -88,6 +88,7 @@ open class ContentViewModel: NSObject, ObservableObject {
     
     @MainActor
     public func restartARSession() {
+        jointRawData = [String:[[String:Any]]]()
         if let internalView = internalView {
             Task { @MainActor in
                 reset(arView: internalView)
@@ -224,6 +225,7 @@ extension ContentViewModel : ARSessionDelegate {
             
             let checker = JSONSerialization.isValidJSONObject(newJointData)
             if checker {
+                jointRawData.removeAll(keepingCapacity: true)
                 jointRawData[anchor.identifier.uuidString] = newJointData
                 
             } else {
@@ -252,7 +254,6 @@ extension ContentViewModel : ARSessionDelegate {
         } catch {
             print(error)
         }
-        sendTask = nil
     }
 }
 
@@ -283,6 +284,9 @@ extension ContentViewModel : MCSessionDelegate {
                         print("Fit selected:\(value!)")
                         Task { @MainActor in
                             fitSelected = value!
+                            if fitSelected{
+                                restartARSession()
+                            }
                         }
                     case "frameReady":
                         let value = messageDict[key]
